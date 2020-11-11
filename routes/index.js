@@ -3,8 +3,10 @@ const express = require('express');
 const mysql = require('mysql');
 const moment = require('moment');
 const router = express.Router();
+const { scheduleEmail } = require('../handlers/EmailScheduler');
 
 const connectDB = require('../database/index.js');
+const EmailScheduler = require('../handlers/EmailScheduler');
 const mysqlConnection = mysql.createConnection({
   host: process.env.HOST,
   user: process.env.USERNAME,
@@ -89,6 +91,8 @@ router.post('/addInterview', async (req, res) => {
   await query(
     `insert into Interviews(start_time, end_time, duration, interviewee, interviewer) values("${start_time}", "${end_time}", "${duration}", "${interviewee}", "${interviewer}")`
   );
+  scheduleEmail(interviewee, new Date(parseInt(start_time)));
+  scheduleEmail(interviewer, new Date(parseInt(start_time)));
   res.send(200);
 });
 
