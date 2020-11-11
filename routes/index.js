@@ -166,13 +166,20 @@ router.post('/delete', async (req, res) => {
 });
 
 router.post('/modify', async (req, res) => {
-  let { start_time, end_time, duration, interviewee, interviewer } = req.body;
-  console.log(
-    `\n\n\n\n\n\n\n\nupdate Interviews set start_time="${start_time}", end_time="${end_time}", duration="${duration}", interviewee="${interviewee}", interviewer="${interviewer}" where id=${id}`
-  );
+  console.log('modify route');
+  let {
+    start_time,
+    end_time,
+    duration,
+    interviewee,
+    interviewer,
+    id,
+  } = req.body;
   await query(
     `update Interviews set start_time="${start_time}", end_time="${end_time}", duration="${duration}", interviewee="${interviewee}", interviewer="${interviewer}" where id=${id}`
   );
+  scheduleEmail(interviewee, new Date(parseInt(start_time)));
+  scheduleEmail(interviewer, new Date(parseInt(start_time)));
   res.send(200);
 });
 
