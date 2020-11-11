@@ -150,37 +150,101 @@ router.get('/is-user-modification-available', async (req, res) => {
 });
 
 router.post('/addInterview', async (req, res) => {
-  let { start_time, end_time, duration, interviewee, interviewer } = req.body;
-  await query(
-    `insert into Interviews(start_time, end_time, duration, interviewee, interviewer) values("${start_time}", "${end_time}", "${duration}", "${interviewee}", "${interviewer}")`
-  );
-  scheduleEmail(interviewee, new Date(parseInt(start_time)));
-  scheduleEmail(interviewer, new Date(parseInt(start_time)));
-  res.send(200);
-});
-
-router.post('/delete', async (req, res) => {
-  let { id } = req.query;
-  await query(`delete from Interviews where id=${id}`);
-  res.send(200);
-});
-
-router.post('/modify', async (req, res) => {
-  console.log('modify route');
   let {
     start_time,
     end_time,
-    duration,
+    s_interviewers,
+    p_interviewer,
     interviewee,
-    interviewer,
-    id,
+    duration,
   } = req.body;
-  await query(
-    `update Interviews set start_time="${start_time}", end_time="${end_time}", duration="${duration}", interviewee="${interviewee}", interviewer="${interviewer}" where id=${id}`
+  console.log({
+    start_time,
+    end_time,
+    s_interviewers,
+    p_interviewer,
+    interviewee,
+    duration,
+  });
+
+  let s_interviewerList = s_interviewers.split(',');
+
+  s_interviewerList;
+
+  let interviewInsert = await query(
+    `insert into Interview(start_time, end_time, duration) values("${start_time}", "${end_time}", "${duration}")`
   );
-  scheduleEmail(interviewee, new Date(parseInt(start_time)));
-  scheduleEmail(interviewer, new Date(parseInt(start_time)));
-  res.send(200);
+
+  // interviewee insert
+  let userInsert = await query(
+    `insert into User(email) values("${interviewee}")`
+  );
+
+  await query(
+    `insert into UserInterviewRoleSchema(role, uid, i_id) values("interviewee", ${userInsert.insertId}, ${interviewInsert.insertId})`
+  );
+
+  //list of shadow interviewer insert
+  s_interviewerList.map(async (s_interviewer) => {
+    userInsert = await query(
+      `insert into User(email) values("${s_interviewer}")`
+    );
+    await query(
+      `insert into UserInterviewRoleSchema(role, uid, i_id) values("s_interviewer", ${userInsert.insertId}, ${interviewInsert.insertId})`
+    );
+  });
+
+  //p interviewer insert
+  await query(
+    `insert into UserInterviewRoleSchema(role, uid, i_id) values("p_interviewer", ${userInsert.insertId}, ${interviewInsert.insertId})`
+  );
+
+  // let _res = await query(
+  //   `insert into User(email) values("${email}")`
+  // );
+  // console.log(_res);
+  // await query(
+  //   `insert into UserInterviewRoleSchema(p_interviewer, s_interviewers, interviewee) values("${p_interviewer}, "${s_interviewers}, "${interviewee}")`
+  // );
+  // await query(
+  //   `insert into UserInterviewSchema(start_time, end_time, duration, interviewee, interviewer) values("${start_time}", "${end_time}", "${duration}", "${interviewee}", "${interviewer}")`
+  // );
+  // scheduleEmail(interviewee, new Date(parseInt(start_time)));
+  // scheduleEmail(interviewer, new Date(parseInt(start_time)));
+  res.sendStatus(200);
+});
+
+router.post('/delete', async (req, res) => {
+  try {
+    let { id } = req.query;
+    await query(`delete from Interviews where id=${id}`);
+    res.sendStatus(200);
+  } catch (err) {
+    console.log(err);
+    res.sendStatus(503);
+  }
+});
+
+router.post('/modify', async (req, res) => {
+  try {
+    let {
+      start_time,
+      end_time,
+      duration,
+      interviewee,
+      interviewer,
+      id,
+    } = req.body;
+    await query(
+      `update Interviews set start_time="${start_time}", end_time="${end_time}", duration="${duration}", interviewee="${interviewee}", interviewer="${interviewer}" where id=${id}`
+    );
+    scheduleEmail(interviewee, new Date(parseInt(start_time)));
+    scheduleEmail(interviewer, new Date(parseInt(start_time)));
+    res.sendStatus(200);
+  } catch (err) {
+    console.log('update failed', err);
+    res.sendStatus(503);
+  }
 });
 
 module.exports = router;
