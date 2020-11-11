@@ -85,6 +85,69 @@ router.get('/is-user-available', async (req, res) => {
     status: 'ok',
   });
 });
+router.get('/is-user-modification-available', async (req, res) => {
+  let { start_time, end_time, email, user_role, id } = req.query;
+  let user = await query(`select * from User where email="${email}"`);
+  if (user[0]?.user_role !== user_role || user?.length == 0) {
+    res.json({
+      status: 'err',
+    });
+  }
+  start_time = parseInt(start_time);
+  end_time = parseInt(end_time);
+  let userInterviewsList = await query(
+    `select * from Interviews where ${user_role}="${email}"`
+  );
+  let newuserInterviewsList = [];
+  userInterviewsList.forEach((interview) => {
+    if (interview.id != id) newuserInterviewsList.push(interview);
+  });
+  console.log(newuserInterviewsList);
+
+  if (newuserInterviewsList.length == 0) {
+    res.json({
+      status: 'ok',
+    });
+  }
+
+  newuserInterviewsList.map((interview) => {
+    let interview_start_time = parseInt(interview.start_time);
+    let interview_end_time = parseInt(interview.end_time);
+
+    if (start_time <= interview_start_time && end_time >= interview_end_time) {
+      res.json({
+        status: 'err',
+      });
+    } else if (
+      start_time >= interview_start_time &&
+      end_time <= interview_end_time
+    ) {
+      res.json({
+        status: 'err',
+      });
+    } else if (
+      start_time <= interview_start_time &&
+      end_time <= interview_end_time &&
+      end_time >= interview_start_time
+    ) {
+      res.json({
+        status: 'err',
+      });
+    } else if (
+      start_time >= interview_start_time &&
+      start_time <= interview_end_time &&
+      end_time >= interview_end_time
+    ) {
+      res.json({
+        status: 'err',
+      });
+    }
+  });
+
+  res.json({
+    status: 'ok',
+  });
+});
 
 router.post('/addInterview', async (req, res) => {
   let { start_time, end_time, duration, interviewee, interviewer } = req.body;
@@ -93,6 +156,23 @@ router.post('/addInterview', async (req, res) => {
   );
   scheduleEmail(interviewee, new Date(parseInt(start_time)));
   scheduleEmail(interviewer, new Date(parseInt(start_time)));
+  res.send(200);
+});
+
+router.post('/delete', async (req, res) => {
+  let { id } = req.query;
+  await query(`delete from Interviews where id=${id}`);
+  res.send(200);
+});
+
+router.post('/modify', async (req, res) => {
+  let { start_time, end_time, duration, interviewee, interviewer } = req.body;
+  console.log(
+    `\n\n\n\n\n\n\n\nupdate Interviews set start_time="${start_time}", end_time="${end_time}", duration="${duration}", interviewee="${interviewee}", interviewer="${interviewer}" where id=${id}`
+  );
+  await query(
+    `update Interviews set start_time="${start_time}", end_time="${end_time}", duration="${duration}", interviewee="${interviewee}", interviewer="${interviewer}" where id=${id}`
+  );
   res.send(200);
 });
 

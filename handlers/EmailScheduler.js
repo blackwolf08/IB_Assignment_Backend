@@ -19,7 +19,7 @@ const scheduleEmail = (invitee, time) => {
   let scheduleCronString = `${moment(time)
     .subtract(10, 'minutes')
     .format('m H DD M')} *`;
-  console.log(scheduleCronString);
+  console.log('Scheduling email with ', scheduleCronString);
   cron.schedule(scheduleCronString, () => {
     mailOptions['to'] = invitee;
     mailOptions['text'] = `You have your email scheduled for ${time}`;
